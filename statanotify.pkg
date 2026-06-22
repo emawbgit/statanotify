@@ -1,0 +1,7 @@
+v 3
+d statanotify. Send desktop notifications from Stata.
+d
+d Distribution-Date: 20231107
+d
+f statanotify.ado
+f statanotify.sthlp
