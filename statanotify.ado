@@ -65,3 +65,4 @@ program statanotify
     }
 
 end
+* Author: Emanuele Clemente
