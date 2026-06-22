@@ -1,4 +1,4 @@
-*! version 1.0.1  07nov2023
+*! version 1.0.3  07nov2023
 program statanotify
     * Capture the return code of the previous command immediately
     local last_rc = _rc
@@ -28,34 +28,30 @@ program statanotify
     }
 
     * Prepare for shell execution (escaping and cleaning)
-    * Replace double quotes with single quotes to avoid breaking shell commands
     local message = subinstr(`"`message'"', char(34), "'", .)
     local title   = subinstr(`"`title'"',   char(34), "'", .)
 
     if "`c(os)'" == "Windows" {
-        * Windows notification using PowerShell
+        * Windows notification using a robust PowerShell script
+        * We use the WScript.Shell Popup method as it is more reliable across Windows versions
+        * and doesn't depend on the system tray icon settings as much as BalloonTips do.
+        
         local ps_msg   = subinstr("`message'", "'", "''", .)
         local ps_title = subinstr("`title'",   "'", "''", .)
         
-        * We use a more robust one-liner that ensures the icon is visible and disposed correctly
-        local ps_cmd "Add-Type -AssemblyName System.Windows.Forms; "
-        local ps_cmd "`ps_cmd' \$n = New-Object System.Windows.Forms.NotifyIcon; "
-        local ps_cmd "`ps_cmd' \$n.Icon = [System.Drawing.SystemIcons]::Information; "
-        local ps_cmd "`ps_cmd' \$n.Visible = \$true; "
-        local ps_cmd "`ps_cmd' \$n.ShowBalloonTip(5000, '`ps_title'', '`ps_msg'', 1); "
-        local ps_cmd "`ps_cmd' Start-Sleep 5; "
-        local ps_cmd "`ps_cmd' \$n.Dispose()"
+        * Popup parameters: message, seconds_to_wait (0=infinite), title, type (64=Info icon)
+        local ps_cmd "(New-Object -ComObject WScript.Shell).Popup('`ps_msg'', 10, '`ps_title'', 64)"
         
-        * Run via winexec to keep it hidden and non-blocking
-        winexec powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "& { `ps_cmd' }"
-        display as text "(statanotify: Windows notification sent)"
+        * Use winexec to run hidden and non-blocking
+        winexec powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "`ps_cmd'"
+        display as text "(statanotify: Windows notification triggered)"
     }
     else if "`c(os)'" == "MacOSX" {
         * macOS notification using osascript
         local mac_msg   = `"`message'"'
         local mac_title = `"`title'"'
         shell osascript -e "display notification \"`mac_msg'\" with title \"`mac_title'\""
-        display as text "(statanotify: macOS notification sent)"
+        display as text "(statanotify: macOS notification triggered)"
     }
     else {
         * Fallback for other systems
