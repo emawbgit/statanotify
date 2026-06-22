@@ -7,7 +7,7 @@ A Stata command to send desktop notifications on Windows and macOS.
 You can install `statanotify` directly from GitHub:
 
 ```stata
-net install statanotify, from("https://raw.githubusercontent.com/emawbgit/statanotify/main")
+net install statanotify, from("https://raw.githubusercontent.com/emawbgit/statanotify/main") replace
 ```
 
 ## Usage
