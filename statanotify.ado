@@ -1,4 +1,4 @@
-*! version 1.0.0  07nov2023
+*! version 1.0.1  07nov2023
 program statanotify
     * Capture the return code of the previous command immediately
     local last_rc = _rc
@@ -34,34 +34,32 @@ program statanotify
 
     if "`c(os)'" == "Windows" {
         * Windows notification using PowerShell
-        * Escape single quotes for PowerShell strings
         local ps_msg   = subinstr("`message'", "'", "''", .)
         local ps_title = subinstr("`title'",   "'", "''", .)
         
-        local ps_cmd "[Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null; "
-        local ps_cmd "`ps_cmd' [Reflection.Assembly]::LoadWithPartialName('System.Drawing') | Out-Null; "
-        local ps_cmd "`ps_cmd' \$objNotifyIcon = New-Object System.Windows.Forms.NotifyIcon; "
-        local ps_cmd "`ps_cmd' \$objNotifyIcon.Icon = [System.Drawing.SystemIcons]::Information; "
-        local ps_cmd "`ps_cmd' \$objNotifyIcon.BalloonTipIcon = 'Info'; "
-        local ps_cmd "`ps_cmd' \$objNotifyIcon.BalloonTipText = '`ps_msg''; "
-        local ps_cmd "`ps_cmd' \$objNotifyIcon.BalloonTipTitle = '`ps_title''; "
-        local ps_cmd "`ps_cmd' \$objNotifyIcon.Visible = \$True; "
-        local ps_cmd "`ps_cmd' \$objNotifyIcon.ShowBalloonTip(10000); "
-        local ps_cmd "`ps_cmd' Start-Sleep -s 1; "
-        local ps_cmd "`ps_cmd' \$objNotifyIcon.Dispose()"
+        * We use a more robust one-liner that ensures the icon is visible and disposed correctly
+        local ps_cmd "Add-Type -AssemblyName System.Windows.Forms; "
+        local ps_cmd "`ps_cmd' \$n = New-Object System.Windows.Forms.NotifyIcon; "
+        local ps_cmd "`ps_cmd' \$n.Icon = [System.Drawing.SystemIcons]::Information; "
+        local ps_cmd "`ps_cmd' \$n.Visible = \$true; "
+        local ps_cmd "`ps_cmd' \$n.ShowBalloonTip(5000, '`ps_title'', '`ps_msg'', 1); "
+        local ps_cmd "`ps_cmd' Start-Sleep 5; "
+        local ps_cmd "`ps_cmd' \$n.Dispose()"
         
-        winexec powershell -noprofile -windowstyle hidden -command "`ps_cmd'"
+        * Run via winexec to keep it hidden and non-blocking
+        winexec powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "& { `ps_cmd' }"
+        display as text "(statanotify: Windows notification sent)"
     }
     else if "`c(os)'" == "MacOSX" {
         * macOS notification using osascript
-        * Use compound double quotes for AppleScript string literals
         local mac_msg   = `"`message'"'
         local mac_title = `"`title'"'
         shell osascript -e "display notification \"`mac_msg'\" with title \"`mac_title'\""
+        display as text "(statanotify: macOS notification sent)"
     }
     else {
-        display as text "statanotify: Notification not supported on `c(os)'."
-        display as text "Message: `message'"
+        * Fallback for other systems
+        window stopbox note "`message'"
     }
 
 end
