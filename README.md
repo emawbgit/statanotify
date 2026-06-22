@@ -36,4 +36,4 @@ statanotify, message("Estimation complete") title("Stata")
 
 ## Author
 
-Created by Jules.
+Emanuele Clemente
