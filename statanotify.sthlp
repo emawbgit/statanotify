@@ -69,5 +69,5 @@ If no message is provided, {cmd:statanotify} will automatically report whether t
 {title:Author}
 
 {pstd}
-Created by Jules.
+Emanuele Clemente
 {p_end}
