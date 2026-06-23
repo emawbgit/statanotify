@@ -16,7 +16,8 @@ Simply add `statanotify` at the end of your script or after a specific command.
 
 ```stata
 * Basic usage
-regress y x
+sysuse auto.dta, clear 
+reg price mpg
 statanotify
 
 * Custom message
