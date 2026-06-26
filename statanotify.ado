@@ -1,4 +1,4 @@
-*! version 1.0.4  07nov2023
+*! version 1.0.5  07nov2023
 program statanotify
     * Capture the return code of the previous command immediately
     local last_rc = _rc
@@ -27,34 +27,36 @@ program statanotify
         }
     }
 
-    * Prepare for shell execution (escaping and cleaning)
-    local message = subinstr(`"`message'"', char(34), "'", .)
-    local title   = subinstr(`"`title'"',   char(34), "'", .)
-
     if "`c(os)'" == "Windows" {
-        * Windows notification using a robust PowerShell script (Popup method)
+        * Clean for PowerShell: replace double quotes with single, then escape single quotes
+        local message = subinstr(`"`message'"', char(34), "'", .)
+        local title   = subinstr(`"`title'"',   char(34), "'", .)
         local ps_msg   = subinstr("`message'", "'", "''", .)
         local ps_title = subinstr("`title'",   "'", "''", .)
         
         local ps_cmd "(New-Object -ComObject WScript.Shell).Popup('`ps_msg'', 10, '`ps_title'', 64)"
-        
         winexec powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "`ps_cmd'"
         display as text "(statanotify: Windows notification triggered)"
     }
     else if "`c(os)'" == "MacOSX" {
-        * macOS notification using osascript (Display Alert method)
-        * This is more reliable than 'display notification' which is often silenced by System Settings
-        local mac_msg   = subinstr("`message'", "'", `\'"`, .)
-        local mac_title = subinstr("`title'",   "'", `\'"`, .)
+        * Clean for AppleScript and Shell: 
+        * 1. Replace double quotes with single quotes to avoid AppleScript string issues
+        local mac_msg   = subinstr(`"`message'"', char(34), "'", .)
+        local mac_title = subinstr(`"`title'"',   char(34), "'", .)
         
-        * Use 'display alert' which creates a popup similar to the Windows version
-        * We run it in the background (&) so it doesn't block Stata
+        * 2. Replace single quotes with a space to avoid breaking the shell command '...'
+        local mac_msg   = subinstr("`mac_msg'", char(39), " ", .)
+        local mac_title = subinstr("`mac_title'", char(39), " ", .)
+        
+        * Build the AppleScript command
         local as_cmd "display alert \"`mac_title'\" message \"`mac_msg'\" as informational buttons {\"OK\"} default button \"OK\" giving up after 10"
+        
+        * Execute via shell in background
         shell osascript -e '`as_cmd'' > /dev/null 2>&1 &
         display as text "(statanotify: macOS notification triggered)"
     }
     else {
-        * Fallback for other systems (Linux, etc.)
+        * Fallback for Linux or other systems
         window stopbox note "`message'"
     }
 
